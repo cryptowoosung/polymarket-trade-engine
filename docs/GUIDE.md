@@ -50,7 +50,7 @@ The repository ships with two strategies, both designed for simulation only. The
 
 | Strategy | `--strategy` flag | File | Description |
 |----------|-------------------|------|-------------|
-| Simulation | `simulation` | `engine/strategy/simulation.ts` | Minimal example. Places a buy at 0.49 immediately, sells at 0.70 on fill, and emergency sells if the sell hasn't filled 30 seconds before market close. Demonstrates `postOrders`, callback chaining, `expireAtMs`, and `emergencySells`. |
+| Simulation | `simulation` | `engine/strategy/simulation.ts` | Minimal example. Places a buy at 0.49 immediately, sells at 0.70 on fill, and emergency sells if the sell hasn't filled 30 seconds before market close. Demonstrates `postOrders`, callback chaining, `expireAtMs`, `emergencySells`, and the cleanup return pattern for clearing timers on destroy. |
 | Late Entry | `late-entry` | `engine/strategy/late-entry.ts` | Event-driven strategy that waits for indicator conditions (ATR, gap safety, divergence, peak gap ratio) before entering late in the market window. Demonstrates `ctx.hold()`, `setInterval`-based market ticking, indicator computation, stop-loss logic, and emergency exits. |
 
 ```bash
@@ -662,6 +662,18 @@ bun run scripts/chart.ts logs/early-bird-btc-updown-5m-1775241600.log [--open]
 This produces an HTML file in the same directory as the log. Pass `--open` to automatically open it in the default browser after writing. Without the flag, open it manually to inspect the chart.
 
 The chart renders the following data on a shared time axis (x-axis = seconds remaining until market close):
+
+**Summary bar**
+
+A header bar above the charts shows at-a-glance stats for the round:
+
+| Field | Description |
+|-------|-------------|
+| BUY filled | Count of filled buy orders, split by UP and DOWN side. |
+| SELL filled | Count of filled sell orders, split by UP and DOWN side. |
+| Pending (unfilled) | Count of buys that filled but whose corresponding sell never filled, per side. Only shown when non-zero. |
+| Resolved | The market outcome direction (UP or DOWN). Only shown after resolution. |
+| PnL | Final PnL for the round in USD, color-coded green (profit) or red (loss). Only shown after resolution. |
 
 **Main chart (Order Book)**
 - UP Ask / DOWN Ask (red lines; DOWN is dashed to distinguish)

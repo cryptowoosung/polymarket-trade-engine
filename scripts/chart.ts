@@ -84,6 +84,23 @@ const orders = entries
     reason: e.reason as string | undefined,
   }));
 
+// ── order fill stats ─────────────────────────────────────────────────────────
+const buyFilledUp    = orders.filter(o => o.action === "buy"  && o.side === "UP"   && o.status === "filled").length;
+const buyFilledDown  = orders.filter(o => o.action === "buy"  && o.side === "DOWN" && o.status === "filled").length;
+const sellFilledUp   = orders.filter(o => o.action === "sell" && o.side === "UP"   && o.status === "filled").length;
+const sellFilledDown = orders.filter(o => o.action === "sell" && o.side === "DOWN" && o.status === "filled").length;
+const pendingUp   = Math.max(0, buyFilledUp   - sellFilledUp);
+const pendingDown = Math.max(0, buyFilledDown - sellFilledDown);
+
+const resolutionEntry = entries.find(e => e.type === "resolution") as {
+  direction: "UP" | "DOWN";
+  openPrice: number;
+  closePrice: number;
+  unfilledShares: number;
+  payout: number;
+  pnl: number;
+} | undefined;
+
 // ── datasets ─────────────────────────────────────────────────────────────────
 
 const snapMeta = (s: Snapshot) => ({
@@ -249,6 +266,23 @@ const html = `<!DOCTYPE html>
       min-height: 100vh;
     }
     .topbar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+    .infobar {
+      display: flex; align-items: center; gap: 16px; flex-shrink: 0; flex-wrap: wrap;
+      font-size: 0.7rem; color: #94a3b8; background: #1e293b;
+      border-radius: 8px; padding: 6px 14px;
+    }
+    .infobar .stat { display: flex; align-items: center; gap: 6px; }
+    .infobar .stat-label { color: #64748b; }
+    .infobar .badge {
+      display: inline-block; padding: 1px 7px; border-radius: 4px;
+      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.03em;
+    }
+    .badge-up   { background: #14532d; color: #4ade80; }
+    .badge-down { background: #1e3a5f; color: #60a5fa; }
+    .badge-warn { background: #451a03; color: #fb923c; }
+    .badge-pnl-pos { background: #14532d; color: #4ade80; }
+    .badge-pnl-neg { background: #450a0a; color: #f87171; }
+    .badge-resolved { background: #312e81; color: #a5b4fc; }
     h1 { font-size: clamp(0.75rem, 1.5vw, 1rem); color: #94a3b8; margin-right: auto; }
     .st-toggle {
       font-family: ui-monospace, monospace; font-size: 0.65rem;
@@ -283,6 +317,31 @@ const html = `<!DOCTYPE html>
     <button class="st-toggle active" data-status="canceled">Cancelled</button>
     <button class="st-toggle active" data-status="expired">Expired</button>
     <button class="st-toggle active" data-status="failed">Failed</button>
+  </div>
+  <div class="infobar">
+    <div class="stat">
+      <span class="stat-label">BUY filled</span>
+      <span class="badge badge-up">UP ${buyFilledUp}</span>
+      <span class="badge badge-down">DOWN ${buyFilledDown}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">SELL filled</span>
+      <span class="badge badge-up">UP ${sellFilledUp}</span>
+      <span class="badge badge-down">DOWN ${sellFilledDown}</span>
+    </div>
+    ${pendingUp > 0 || pendingDown > 0 ? `<div class="stat">
+      <span class="stat-label">Pending (unfilled)</span>
+      ${pendingUp   > 0 ? `<span class="badge badge-warn">UP ${pendingUp}</span>`   : ""}
+      ${pendingDown > 0 ? `<span class="badge badge-warn">DOWN ${pendingDown}</span>` : ""}
+    </div>` : ""}
+    ${resolutionEntry ? `<div class="stat">
+      <span class="stat-label">Resolved</span>
+      <span class="badge badge-resolved">${resolutionEntry.direction}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">PnL</span>
+      <span class="badge ${resolutionEntry.pnl >= 0 ? "badge-pnl-pos" : "badge-pnl-neg"}">${resolutionEntry.pnl >= 0 ? "+" : ""}${resolutionEntry.pnl.toFixed(2)}</span>
+    </div>` : ""}
   </div>
   <div class="panes">
     <div class="pane pane-main"><canvas id="chart-main"></canvas></div>
